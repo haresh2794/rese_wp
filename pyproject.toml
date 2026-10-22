@@ -1,13 +1,18 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rese-ws"
-version = "0.1.0.0"
+name = "rese-wp-components"
+version = "0.1.0"
 description = "HyTEA workshop Session 1"
-requires-python = ">=3.10"
-dependencies = ["numpy"]
-
-[tool.setuptools.packages.find]
-where = ["src"]
+authors = [
+    { name = "Haresh" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "pandas",
+    "pyyaml"
+]
