@@ -1,0 +1,105 @@
+import pandas as pd
+import numpy as np
+
+
+class AmmoniaProduction:
+
+    def __init__(self):
+        #inputs
+        self.hy_input = None
+        self.specific_capex = None
+        self.specific_energy_consumption_mwh_per_ton = None
+        self.electricity_price_per_mwh = None
+        
+
+        #Outputs
+        self.hourly_energy_consumption_mwh = None
+        self.VOPEX = None
+        self.FOPEX = None
+        self.production_hourly_tons = None
+        self.produced_tonnes = None
+        self.cumulative_production_tonnes = None
+        self.hourly_hydrogen = None
+
+
+        self.results = None
+
+
+    #configuration
+    def configure(self, config=None):
+        if config is None:
+            return
+
+        self.hy_input = config.get("hy_input", self.hy_input)
+        self.specific_capex = config.get("specific_capex", self.specific_capex)
+        self.specific_energy_consumption_mwh_per_ton = config.get("specific_energy_consumption_mwh_per_ton", self.specific_energy_consumption_mwh_per_ton)
+        self.electricity_price_per_mwh = config.get("electricity_price_per_mwh", self.electricity_price_per_mwh)
+
+    
+
+    #helper methods
+    #need formulas for; import hy, calculates hourly ammonia prod, cumulutive ammonia, FOPEX, VOPEX
+    def _hourly_hydrogen(self, hy_input):
+        return hy_input 
+
+    def _hourly_ammonia_production(self, hy_input):
+        return hy_input * 0.2143
+
+    def _cumulative_ammonia_production(self, hourly_ammonia_production):
+        return np.cumsum(hourly_ammonia_production)
+
+    def _annual_capex(self, specific_capex, cumulative_production_tonnes):
+        return specific_capex * cumulative_production_tonnes * 365
+
+    def _fopex(self):
+        return self._annual_capex(self.specific_capex, self.cumulative_production_tonnes) * 0.05
+
+    def _vopex(self, specific_energy_consumption_mwh_per_ton, electricity_price_per_mwh, production_hourly_tons):
+        return specific_energy_consumption_mwh_per_ton * electricity_price_per_mwh * production_hourly_tons
+
+    def _total_vopex(self, vopex):
+        return np.cumsum(vopex)
+
+    def _hourly_energy_consumption(self, specific_energy_consumption_mwh_per_ton, production_hourly_tons):
+        return specific_energy_consumption_mwh_per_ton * production_hourly_tons
+    
+
+
+
+
+#Evaluate
+    def evaluate(self):
+        if self.hy_input is None:
+            raise ValueError(
+                "hy_input must be provided in the configuration."
+            )
+
+        self.hourly_hydrogen = self._hourly_hydrogen(self.hy_input)
+        self.production_hourly_tons = self._hourly_ammonia_production(self.hy_input)
+        self.cumulative_production_tonnes = self._cumulative_ammonia_production(self.production_hourly_tons)
+
+
+df = pd.read_csv(r"C:\Users\cianf\OneDrive\Desktop\Masters' Thesis\HyTEA Workshop\rese_wp_cian\rese_wp_components\hydrogen_input.csv")
+
+
+hourly_hydrogen = df["hourly_hy_input"].to_numpy(dtype=float)
+
+scenario = AmmoniaProduction()
+
+scenario.configure({
+    "hy_input": hourly_hydrogen,
+    "specific_capex": 500,  # Example value for specific_capex
+    "specific_energy_consumption_mwh_per_ton": 10,  # Example value for specific_energy_consumption_mwh_per_ton
+    "electricity_price_per_mwh": 50,  # Example value for electricity_price_per_mwh
+})
+
+results_scenario = scenario.evaluate()
+
+print("Hourly Hydrogen:", scenario.hourly_hydrogen)
+print("Hourly Ammonia Production (tons):", scenario.production_hourly_tons)
+print("Cumulative Ammonia Production (tons):", scenario.cumulative_production_tonnes)
+print("FOPEX:", scenario._fopex())
+print("VOPEX:", scenario._vopex(scenario.specific_energy_consumption_mwh_per_ton, scenario.electricity_price_per_mwh, scenario.production_hourly_tons))
+print("Total VOPEX:", scenario._total_vopex(scenario._vopex(scenario.specific_energy_consumption_mwh_per_ton, scenario.electricity_price_per_mwh, scenario.production_hourly_tons)))
+print("Hourly Energy Consumption (MWh):", scenario._hourly_energy_consumption(scenario.specific_energy_consumption_mwh_per_ton, scenario.production_hourly_tons))
+
